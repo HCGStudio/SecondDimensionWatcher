@@ -1,0 +1,20 @@
+﻿@page
+@model PlayBackModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="container-fluid">
+    <p>
+        <a class="btn btn-primary" href="@Model.PlayBackUrl">下载</a>
+    </p>
+    <p>
+        <video class="video-js vjs-fluid" data-setup="{}" id="player"
+               controls>
+            @* TODO: Add subtitle support *@
+            <source src="@Model.PlayBackUrl" type="@Model.Mime"/>
+        </video>
+    </p>
+</div>
+
+<script type="text/javascript" src="/lib/videojs/video.min.js"></script>

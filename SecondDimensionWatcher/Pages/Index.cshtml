@@ -1,0 +1,140 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "主页";
+}
+
+<div id="app">
+    <div class="container-fluid">
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            提示：拉取订阅在服务端自动进行，若要强制刷新，请点击<a @@onclick="forceReload" href="#" class="alert-link">强制刷新</a>。
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <nav>
+            <ul class="pagination">
+                <li v-bind:class="{active : selector === 'remote'}" class="page-item">
+                    <button v-on:click="setSelector('remote')" class="page-link">远程</button>
+                </li>
+                <li v-bind:class="{active : selector === 'local'}" class="page-item">
+                    <button v-on:click="setSelector('local')" class="page-link">本地</button>
+                </li>
+                <li v-bind:class="{active : selector === 'downloading'}" class="page-item">
+                    <button v-on:click="setSelector('downloading')" class="page-link">正在下载</button>
+                </li>
+                <li v-bind:class="{active : selector === 'finished'}" class="page-item">
+                    <button v-on:click="setSelector('finished')" class="page-link">已完成</button>
+                </li>
+            </ul>
+        </nav>
+        <div v-if="isLoading" class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中</span>
+            </div>
+        </div>
+        <animation-view
+            v-bind:selector="selector"
+            v-for="item in remoteList"
+            v-bind:animation="item">
+        </animation-view>
+        <animation-view
+            v-bind:selector="selector"
+            v-for="item in localList"
+            v-bind:animation="item">
+        </animation-view>
+    </div>
+</div>
+
+<script type="text/x-template" id="animation-view">
+    <div class="card" v-if="canShow()" style="margin-bottom: 10px">
+        <div class="card-body">
+            <h5 class="card-title">{{ animation.id }}</h5>
+            <p class="card-subtitle mb-2 text-muted"><i class="bi bi-clock"></i>&nbsp;发布时间：{{ animation.publishTime }}</p>
+            <button type="button" v-if="animation.isTracked === false" @@click="beginDownload()" class="btn btn-primary">添加到下载队列</button>
+            <p class="progress" v-if="isRunning"><div class="progress-bar progress-bar-animated progress-bar-striped" v-bind:style="progress" role="progressbar"></div></p>
+            <p class="progress" v-if="isFinished"><div class="progress-bar progress-bar-striped bg-success" style="width: 100%" role="progressbar"></div></p>
+            <p class="progress" v-if="isPaused"><div class="progress-bar progress-bar-striped bg-warning" v-bind:style="progress" role="progressbar"></div></p>
+            <p class="card-text" v-if="isRunning">
+                <i class="bi bi-clock"></i>&nbsp;剩余时间: {{ info.Eta }}&nbsp;
+                <i class="bi bi-download"></i>下载速度: {{ info.Speed }}&nbsp;
+            </p>
+            <p class="card-text" v-if="isFinished">已完成</p>
+            <p class="card-text" v-if="isPaused"><i class="bi bi-pause-circle"></i>&nbsp;暂停中</p>
+            <button type="button" v-if="isRunning" @@click="pause()" class="btn btn-warning"><i class="bi bi-pause-fill"></i>&nbsp;暂停</button>
+            <button type="button" v-if="isPaused" @@click="resume()" class="btn btn-success"><i class="bi bi-play-fill"></i>&nbsp;恢复</button>
+            <file-view v-if="isFinished"
+                       v-bind:name="animation.id"
+                       v-bind:hash="animation.hash">
+            </file-view>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="breadcrumb-items">
+    <li class="breadcrumb-item" aria-current="page">
+        <i class="bi bi-folder2-open"></i>
+        {{name}}
+    </li>
+</script>
+
+<script type="text/x-template" id="file-detail">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-file-earmark"></i>
+                {{name}}
+            </span>
+            <span class="text-nowrap">
+                <button @@click="downloadFile" class="btn btn-link">
+                    <i class="bi bi-download"></i>
+                </button>
+                <button @@click="playOnline" class="btn btn-link">
+                    <i class="bi bi-play"></i>
+                </button>
+            </span>
+
+        </li>
+</script>
+
+<script type="text/x-template" id="folder-detail">
+    <a @@onclick="" href="#" class="list-group-item d-flex justify-content-between align-items-center">
+        <span>
+            <i class="bi bi-folder"></i>
+            {{name}}
+        </span>
+    </a>
+
+</script>
+
+<script type="text/x-template" id="file-view">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <breadcrumb-items v-for="route in pastRoutes"
+                              v-bind:isActive="false"
+                              v-bind:name="displayRouteName(route)">
+            </breadcrumb-items>
+            <breadcrumb-items v-bind:isActive="false" v-bind:name="displayRouteName(currentRoute)">
+            </breadcrumb-items>
+        </ol>
+        <ul lass="list-group">
+            <folder-detail v-for="folder in folders"
+                           v-bind:parent="this"
+                           v-bind:name="folder">
+            </folder-detail>
+            <file-detail v-for="file in files"
+                         v-bind:hash="hash"
+                         v-bind:relativePath="buildUpRoute()"
+                         v-bind:name="file">
+            </file-detail>
+        </ul>
+    </nav>
+</script>
+
+
+<environment exclude="Development">
+    <script src="/lib/vue/vue.global.prod.js"></script>
+    <script type="text/javascript" src="/js/main-min.js"></script>
+</environment>
+
+<environment include="Development">
+    <script src="/lib/vue/vue.global.js"></script>
+    <script type="text/javascript" src="/js/main.js"></script>
+</environment>
