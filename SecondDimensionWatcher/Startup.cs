@@ -33,7 +33,7 @@ namespace SecondDimensionWatcher
                 c.SwaggerDoc("v1", new() {Title = "SecondDimensionWatcher", Version = "v1"});
             });
             var provider = new FileExtensionContentTypeProvider();
-            provider.Mappings.Add(".mkv", "	video/webm");
+            provider.Mappings.Add(".mkv", "video/webm");
             services.AddSingleton(provider);
             services.AddHttpClient<TorrentController>(client =>
             {
