@@ -5,10 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using ByteSizeLib;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
@@ -216,6 +218,7 @@ namespace SecondDimensionWatcher.Controllers
         [HttpGet("Download/{id}")]
         public async Task<IActionResult> DownloadAsync([FromRoute] string id, CancellationToken cancellationToken)
         {
+            id = HttpUtility.UrlDecode(id);
             var animationInfo = await _dataContext.AnimationInfo.FindAsync(id);
             if (animationInfo == null)
                 return NotFound();
