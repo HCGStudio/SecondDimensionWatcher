@@ -143,7 +143,7 @@ namespace SecondDimensionWatcher.Controllers
             return file;
         }
 
-        internal async Task<string> GetMimeAsync([FromRoute] string hash, [FromQuery] string relativePath)
+        internal async Task<string> GetMimeAsync(string hash, string relativePath)
         {
             var info = (await GetTorrentStatus(hash, default)).First();
             var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
@@ -153,6 +153,14 @@ namespace SecondDimensionWatcher.Controllers
                 .TryGetContentType(fileInfo.Extension, out var contentType)
                 ? contentType
                 : "application/octet-stream";
+        }
+
+        internal async Task<string> GetRealPathAsync(string hash, string relativePath)
+        {
+            var info = (await GetTorrentStatus(hash, default)).First();
+            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
+            if (System.IO.File.Exists(info.SavePath)) fileInfo = new(info.SavePath);
+            return fileInfo.FullName;
         }
 
         private bool CanBeSubtitle(string ext)

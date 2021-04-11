@@ -24,6 +24,7 @@ namespace SecondDimensionWatcher.Pages
         public List<string> SrtUrls { get; set; }
         public string Name { get; set; }
         public string Hash { get; set; }
+        public string RealPath { get; set; }
 
         public string ToUrl(string hash, string path)
         {
@@ -36,6 +37,7 @@ namespace SecondDimensionWatcher.Pages
             PlayBackUrl = ToUrl(hash, path);
             Name = path.Split("/").Last();
             Mime = await _torrentController.GetMimeAsync(hash, path);
+            RealPath = await _torrentController.GetRealPathAsync(hash, path);
             var subtitles = new List<string>();
             //Can not use System.Linq.Async due to the use of EF core.
             await foreach (var sub in _torrentController.PossibleSubtitles(hash, path)) subtitles.Add(sub);
