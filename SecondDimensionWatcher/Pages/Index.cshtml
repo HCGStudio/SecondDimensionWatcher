@@ -32,11 +32,13 @@
             </div>
         </div>
         <animation-view
+            v-if="selector === 'remote'"
             v-bind:selector="selector"
             v-for="item in remoteList"
             v-bind:animation="item">
         </animation-view>
         <animation-view
+            v-if="selector !== 'remote'"
             v-bind:selector="selector"
             v-for="item in localList"
             v-bind:animation="item">
