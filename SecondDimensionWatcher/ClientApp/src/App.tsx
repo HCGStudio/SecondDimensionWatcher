@@ -1,26 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
-import 'bootstrap/dist/bootstrap.min.css'
-import 'bootstrap-icons/fonts/bootstrap-icons.css'
+import React from "react";
+import "./App.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+    <div>
+      <header>
+        <nav className="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+          <div className="container">
+            <a className="navbar-brand" href="/">二次元观测器</a>
+          </div>
+        </nav>
       </header>
+      <div className="container">
+        
+      </div>
+      <footer className="border-top footer text-muted">
+        <div className="container">&copy; 2021 - HCGStudio 二次元观测器</div>
+      </footer>
     </div>
   );
 }
