@@ -1,5 +1,5 @@
-﻿@page
-@model IndexModel
+﻿@*@page*@
+@model SecondDimensionWatcher.Pages.IndexModel
 @{
     ViewData["Title"] = "主页";
 }
@@ -8,7 +8,7 @@
     <div class="container-fluid">
         <div class="alert alert-info alert-dismissible fade show" role="alert">
             提示：拉取订阅在服务端自动进行，若要强制刷新，请点击<a v-on:click="forceReload" href="#" class="alert-link">强制刷新</a>。
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         <nav>
             <ul class="pagination">

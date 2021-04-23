@@ -23,7 +23,9 @@ namespace SecondDimensionWatcher
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+            services.AddServerSideBlazor();
             services.AddControllers();
+
             services.AddDbContext<AppDataContext>(options =>
             {
                 options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
@@ -35,13 +37,17 @@ namespace SecondDimensionWatcher
             var provider = new FileExtensionContentTypeProvider();
             provider.Mappings.Add(".mkv", "video/webm");
             services.AddSingleton(provider);
+            services.AddHttpClient<FeedController>(client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.Add(
+                    new("SecondDimensionWatcher", "1.0"));
+            });
             services.AddHttpClient<TorrentController>(client =>
             {
                 client.BaseAddress = new(Configuration["DownloadSetting:BaseAddress"]);
                 client.DefaultRequestHeaders.UserAgent.Add(
                     new("SecondDimensionWatcher", "1.0"));
             });
-
             services.AddQuartz(q =>
             {
                 var jobKey = new JobKey("rss");
@@ -52,25 +58,15 @@ namespace SecondDimensionWatcher
 
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-            services.AddHttpClient<FeedController>(client =>
-            {
-                client.DefaultRequestHeaders.UserAgent.Add(
-                    new("SecondDimensionWatcher", "1.0"));
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, AppDataContext dataContext)
         {
             if (env.IsDevelopment())
-            {
                 app.UseDeveloperExceptionPage();
-            }
             else
-            {
-                app.UseExceptionHandler("/Error");
                 app.UseHsts();
-            }
 
             dataContext.Database.Migrate();
 
@@ -78,16 +74,10 @@ namespace SecondDimensionWatcher
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SecondDimensionWatcher v1"));
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                OnPrepareResponse = context =>
-                {
-                    context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
-                    context.Context.Response.Headers.Add("Expires", "-1");
-                }
-            });
 
-            app.UseWebSockets();
+            app.UseStaticFiles();
+
+            //app.UseWebSockets();
 
             app.UseRouting();
 
@@ -95,8 +85,11 @@ namespace SecondDimensionWatcher
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapRazorPages();
+                //endpoints.MapRazorPages();
                 endpoints.MapControllers();
+                endpoints.MapBlazorHub();
+                endpoints.MapFallbackToPage("/_Host");
+                //endpoints.MapControllers();
             });
         }
     }

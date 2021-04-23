@@ -1,6 +1,6 @@
-﻿@page
+﻿@*@page*@
 @using System.IO
-@model PlayBackModel
+@model SecondDimensionWatcher.Pages.PlayBackModel
 @{
     ViewData["Title"] = Model.Name;
 }
@@ -16,13 +16,13 @@
                    id="player"
                    controls>
                 @* TODO: Add subtitle support *@
-                <source src="@Model.PlayBackUrl" type="@Model.Mime" />
+                <source src="@Model.PlayBackUrl" type="@Model.Mime"/>
             </video>
         </p>
     }
     else if (Model.Mime == "text/plain")
     {
-        <pre><code lang="@(new FileInfo(Model.RealPath).Extension[1..])">@await System.IO.File.ReadAllTextAsync(Model.RealPath)</code></pre>
+        <pre><code lang="@(new FileInfo(Model.RealPath).Extension[1..])">@await File.ReadAllTextAsync(Model.RealPath)</code></pre>
     }
     else if (Model.Mime == "application/pdf")
     {
@@ -48,5 +48,4 @@
 else if (Model.Mime == "text/plain")
 {
     <script type="text/javascript" src="/lib/highlight/highlight.pack.js"></script>
-
 }
