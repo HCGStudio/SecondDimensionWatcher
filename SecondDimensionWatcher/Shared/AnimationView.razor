@@ -35,9 +35,9 @@
                 <p class="card-text">
                     <i class="bi bi-check"></i>已完成
                 </p>
-                <button type="button" @onclick="@(async () => await ViewFileAsync())" class="btn btn-success">
+                <a href="@($"/file/{AnimationInfo.Hash}")" class="btn btn-success">
                     <i class="bi bi-file-earmark"></i>&nbsp;查看文件
-                </button>
+                </a>
                 <button type="button" data-bs-toggle="modal"
                         @onclick="@Delete" data-bs-target="#mainModal"
                         class="btn btn-danger">

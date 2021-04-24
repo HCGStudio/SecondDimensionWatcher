@@ -42,35 +42,5 @@ namespace SecondDimensionWatcher.Pages
                 CurrentPath.Pop();
         }
 
-        public async ValueTask OpenPlayBack(string path = "")
-        {
-            if (IsFolder)
-                await JSRuntime.InvokeVoidAsync(
-                    "open",
-                    $"/play/{AnimationInfo.Hash}/" +
-                    $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), path))}",
-                    "_blank");
-            else
-                await JSRuntime.InvokeVoidAsync(
-                    "open",
-                    $"/play/{AnimationInfo.Hash}/{HttpUtility.UrlEncode("play")}",
-                    "_blank");
-        }
-
-        public async ValueTask DownloadFile(string path = "")
-        {
-            if (IsFolder)
-                await JSRuntime.InvokeVoidAsync(
-                    "open",
-                    $"/api/Torrent/File/{AnimationInfo.Hash}?relativePath=" +
-                    $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), path))}",
-                    "_blank");
-            else
-                await JSRuntime.InvokeVoidAsync(
-                    "open",
-                    $"/api/Torrent/File/{AnimationInfo.Hash}?relativePath=" +
-                    $"{HttpUtility.UrlEncode("play")}",
-                    "_blank");
-        }
     }
 }

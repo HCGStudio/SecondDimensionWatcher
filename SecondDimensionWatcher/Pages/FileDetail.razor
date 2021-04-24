@@ -1,4 +1,5 @@
 ﻿@page "/file/{hash}"
+@using System.Web
 @using System.IO
 
 @if (IsReady)
@@ -39,12 +40,14 @@
                         @file.Name
                     </span>
                     <span class="text-nowrap">
-                        <button @onclick="@(async () => await DownloadFile(file.Name))" class="btn btn-link btn-sm">
+                        <a href="@($"/api/Torrent/File/{AnimationInfo?.Hash}?relativePath=" + $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), file.Name))}")"
+                           class="btn btn-link btn-sm">
                             <i class="bi bi-download"></i>
-                        </button>
-                        <button @onclick="@(async () => await OpenPlayBack(file.Name))" class="btn btn-link btn-sm">
+                        </a>
+                        <a href="@($"/play/{AnimationInfo?.Hash}/" + $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), file.Name))}")"
+                           class="btn btn-link btn-sm">
                             <i class="bi bi-play"></i>
-                        </button>
+                        </a>
                     </span>
                 </div>
             }
@@ -57,12 +60,13 @@
                     @(new FileInfo(Base).Name)
                 </span>
                 <span class="text-nowrap">
-                    <button @onclick="@(async () => await DownloadFile())" class="btn btn-link btn-sm">
+                    <a href="@($"/api/Torrent/File/{AnimationInfo?.Hash}?relativePath=" + $"{HttpUtility.UrlEncode("play")}")"
+                       class="btn btn-link btn-sm">
                         <i class="bi bi-download"></i>
-                    </button>
-                    <button @onclick="@(async () => await OpenPlayBack())" class="btn btn-link">
+                    </a>
+                    <a href="@($"/play/{AnimationInfo?.Hash}/{HttpUtility.UrlEncode("play")}")" class="btn btn-link">
                         <i class="bi bi-play btn-sm"></i>
-                    </button>
+                    </a>
                 </span>
             </div>
         }

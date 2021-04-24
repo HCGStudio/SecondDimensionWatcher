@@ -146,11 +146,7 @@ namespace SecondDimensionWatcher.Shared
         {
             await TorrentController.ResumeAsync(AnimationInfo.Hash, CancellationToken.None);
         }
-
-        public async ValueTask ViewFileAsync()
-        {
-            await JSRuntime.InvokeVoidAsync("open", $"/file/{AnimationInfo.Hash}", "_blank");
-        }
+        
 
         public void Delete()
         {
