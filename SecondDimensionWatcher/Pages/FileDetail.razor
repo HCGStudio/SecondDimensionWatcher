@@ -1,0 +1,70 @@
+﻿@page "/file/{hash}"
+@using System.IO
+
+@if (IsReady)
+{
+    <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active">@AnimationInfo?.Id</li>
+            @foreach (var item in CurrentPath)
+            {
+                <li class="breadcrumb-item active">@item</li>
+            }
+        </ol>
+    </nav>
+    <div class="list-group">
+        @if (IsFolder)
+        {
+            @if (CurrentPath.Count > 0)
+            {
+                <a href="" class="list-group-item list-group-item-action"
+                   @onclick="@(() => PushPath(".."))" @onclick:preventDefault>
+                    <i class="bi bi-folder"></i>
+                    ..
+                </a>
+            }
+            @foreach (var dir in CurrentInfo.EnumerateDirectories())
+            {
+                <a href="" class="list-group-item list-group-item-action"
+                   @onclick="@(() => PushPath(dir.Name))" @onclick:preventDefault>
+                    <i class="bi bi-folder"></i>
+                    @dir.Name
+                </a>
+            }
+            @foreach (var file in CurrentInfo.EnumerateFiles())
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-file-earmark"></i>
+                        @file.Name
+                    </span>
+                    <span class="text-nowrap">
+                        <button @onclick="@(async () => await DownloadFile(file.Name))" class="btn btn-link btn-sm">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        <button @onclick="@(async () => await OpenPlayBack(file.Name))" class="btn btn-link btn-sm">
+                            <i class="bi bi-play"></i>
+                        </button>
+                    </span>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-file-earmark"></i>
+                    @(new FileInfo(Base).Name)
+                </span>
+                <span class="text-nowrap">
+                    <button @onclick="@(async () => await DownloadFile())" class="btn btn-link btn-sm">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button @onclick="@(async () => await OpenPlayBack())" class="btn btn-link">
+                        <i class="bi bi-play btn-sm"></i>
+                    </button>
+                </span>
+            </div>
+        }
+    </div>
+}

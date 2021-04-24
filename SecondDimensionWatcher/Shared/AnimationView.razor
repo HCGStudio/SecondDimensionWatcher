@@ -1,0 +1,56 @@
+﻿<div class="card" style="margin-bottom: 10px">
+    <div class="card-body">
+        <h5 class="card-title">@AnimationInfo.Id</h5>
+        <p class="card-subtitle mb-2 text-muted">
+            <i class="bi bi-clock"></i>&nbsp;发布时间：@AnimationInfo.PublishTime.ToString("f")
+        </p>
+
+        @if (AnimationInfo.IsTracked)
+        {
+            <Progress Class="@ProgressClass" Value="@ProgressValue"></Progress>
+        }
+
+        @switch (Status)
+        {
+            case TorrentStatus.UnTracked:
+                <button type="button" @onclick="@(async () => await Download())" class="btn btn-primary">添加到下载队列</button>
+                break;
+            case TorrentStatus.Running:
+                <p class="card-text">
+                    <i class="bi bi-clock"></i>&nbsp;剩余时间: @RemainTimeString&nbsp;
+                    <i class="bi bi-download"></i>下载速度: @SpeedString&nbsp;
+                </p>
+                <button type="button" @onclick="@(async () => await Pause())" class="btn btn-warning"><i class="bi bi-pause-fill"></i>&nbsp;暂停</button>
+                <button type="button" data-bs-toggle="modal" @onclick="@Delete" data-bs-target="#mainModal" class="btn btn-secondary"><i class="bi bi-x"></i>&nbsp;取消</button>
+                break;
+            case TorrentStatus.Paused:
+                <p class="card-text">
+                    <i class="bi bi-pause-circle"></i>
+                    暂停中
+                </p>
+                <button type="button" @onclick="@(async () => await Resume())" class="btn btn-success"><i class="bi bi-play-fill"></i>&nbsp;恢复</button>
+                <button type="button" data-bs-toggle="modal" @onclick="@Delete" data-bs-target="#mainModal" class="btn btn-secondary"><i class="bi bi-x"></i>&nbsp;取消</button>
+                break;
+            case TorrentStatus.Finished:
+                <p class="card-text">
+                    <i class="bi bi-check"></i>已完成
+                </p>
+                <button type="button" @onclick="@(async () => await ViewFileAsync())" class="btn btn-success">
+                    <i class="bi bi-file-earmark"></i>&nbsp;查看文件
+                </button>
+                <button type="button" data-bs-toggle="modal"
+                        @onclick="@Delete" data-bs-target="#mainModal"
+                        class="btn btn-danger">
+                    <i class="bi bi-x"></i>&nbsp;删除
+                </button>
+                break;
+            case TorrentStatus.Error:
+                <p class="card-text">
+                    <i class="bi bi-x"></i>错误
+                </p>
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    </div>
+</div>

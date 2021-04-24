@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SecondDimensionWatcher.Data;
@@ -9,9 +10,10 @@ using SecondDimensionWatcher.Data;
 namespace SecondDimensionWatcher.Migrations
 {
     [DbContext(typeof(AppDataContext))]
-    partial class AppDataContextModelSnapshot : ModelSnapshot
+    [Migration("20210424042346_AddTrackTime")]
+    partial class AddTrackTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,17 +32,11 @@ namespace SecondDimensionWatcher.Migrations
                     b.Property<string>("Hash")
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsFinished")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsTracked")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset>("PublishTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("StorePath")
-                        .HasColumnType("text");
 
                     b.Property<byte[]>("TorrentData")
                         .HasColumnType("bytea");

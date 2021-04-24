@@ -1,0 +1,17 @@
+﻿@page "/play/{hash}/{path}"
+
+<h2>@FileInfo?.Name</h2>
+
+@if (IsReady)
+{
+    <p>
+        <video class="video-js vjs-fluid vjs-theme-fantasy"
+               data-setup="{}"
+               id="player"
+               controls>
+            @* TODO: Add subtitle support *@
+            <source src="@FileUrl" type="@Mime"/>
+        </video>
+    </p>
+    <a class="btn btn-primary" href="@FileUrl">下载</a>
+}

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using BencodeNET.Objects;
 using BencodeNET.Parsing;
 using CodeHollow.FeedReader;
-using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -28,12 +27,12 @@ namespace SecondDimensionWatcher.Controllers
         private readonly ILogger<FeedController> _logger;
 
         public FeedController(ILogger<FeedController> logger, AppDataContext dataContext, IConfiguration configuration,
-            HttpClient http)
+            HttpClient client)
         {
             _logger = logger;
             _dataContext = dataContext;
             _configuration = configuration;
-            _http = http;
+            _http = client;
         }
 
         private static AsyncLock Mutex { get; } = new();
@@ -91,34 +90,31 @@ namespace SecondDimensionWatcher.Controllers
         }
 
         [HttpGet]
-        public async Task<IEnumerable<AnimationInfoDto>> GetAsync([FromQuery] int after = 0)
+        public async Task<IEnumerable<AnimationInfo>> GetAsync([FromQuery] int after = 0)
         {
             return await _dataContext.AnimationInfo
                 .OrderByDescending(x => x.PublishTime)
                 .Skip(after).Take(10)
-                .Select(i => i.Adapt<AnimationInfoDto>())
                 .ToListAsync();
         }
 
         [HttpGet("Tracked")]
-        public async Task<IEnumerable<AnimationInfoDto>> GetTrackedAsync([FromQuery] int after = 0)
+        public async Task<IEnumerable<AnimationInfo>> GetTrackedAsync([FromQuery] int after = 0)
         {
             return await _dataContext.AnimationInfo
                 .Where(x => x.IsTracked)
                 .OrderByDescending(x => x.PublishTime)
                 .Skip(after).Take(10)
-                .Select(i => i.Adapt<AnimationInfoDto>())
                 .ToListAsync();
         }
 
         [HttpGet("UnTracked")]
-        public async Task<IEnumerable<AnimationInfoDto>> GetUnTrackedAsync([FromQuery] int after = 0)
+        public async Task<IEnumerable<AnimationInfo>> GetUnTrackedAsync([FromQuery] int after = 0)
         {
             return await _dataContext.AnimationInfo
                 .Where(x => !x.IsTracked)
                 .OrderByDescending(x => x.PublishTime)
                 .Skip(after).Take(10)
-                .Select(i => i.Adapt<AnimationInfoDto>())
                 .ToListAsync();
         }
     }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -15,6 +14,7 @@ using ByteSizeLib;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SecondDimensionWatcher.Data;
@@ -33,20 +33,17 @@ namespace SecondDimensionWatcher.Controllers
 
 
         public TorrentController(IConfiguration configuration, AppDataContext dataContext,
-            ILogger<FeedController> logger, HttpClient http,
+            ILogger<FeedController> logger, HttpClient client,
             FileExtensionContentTypeProvider extensionContentTypeProvider)
         {
             _configuration = configuration;
             _dataContext = dataContext;
             _logger = logger;
-            _http = http;
+            _http = client;
             _extensionContentTypeProvider = extensionContentTypeProvider;
-            http.BaseAddress = new(_configuration["DownloadSetting:BaseAddress"]);
-            http.DefaultRequestHeaders.UserAgent.Add(
-                new("SecondDimensionWatcher", "1.0"));
         }
 
-        protected async Task<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
+        internal async Task<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
         {
             var response = await _http.GetStreamAsync("/api/v2/torrents/info?hashes=" + hash, cancellationToken);
             return await JsonSerializer.DeserializeAsync<TorrentInfo[]>(response, cancellationToken: cancellationToken);
@@ -71,18 +68,23 @@ namespace SecondDimensionWatcher.Controllers
             return Ok();
         }
 
+        internal async Task<TorrentInfo> GetTorrentInfoOnce(string hash, CancellationToken cancellationToken)
+        {
+            var status = await GetTorrentStatus(hash, cancellationToken);
+            return status.First();
+        }
+
+
         [HttpGet("Pause/{hash}")]
-        public async Task<IActionResult> PauseAsync([FromRoute] string hash, CancellationToken cancellationToken)
+        public async Task PauseAsync([FromRoute] string hash, CancellationToken cancellationToken)
         {
             await _http.GetAsync("/api/v2/torrents/pause?hashes=" + hash, cancellationToken);
-            return Ok();
         }
 
         [HttpGet("Resume/{hash}")]
-        public async Task<IActionResult> ResumeAsync([FromRoute] string hash, CancellationToken cancellationToken)
+        public async Task ResumeAsync([FromRoute] string hash, CancellationToken cancellationToken)
         {
             await _http.GetAsync("/api/v2/torrents/resume?hashes=" + hash, cancellationToken);
-            return Ok();
         }
 
         [HttpDelete("Untrack/{id}")]
@@ -131,15 +133,27 @@ namespace SecondDimensionWatcher.Controllers
         [HttpGet("File/{hash}")]
         public async Task<IActionResult> GetFileAsync([FromRoute] string hash, [FromQuery] string relativePath)
         {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
-            if (System.IO.File.Exists(info.SavePath)) fileInfo = new(info.SavePath);
+            var info = await _dataContext
+                .AnimationInfo
+                .Where(a => a.Hash == hash)
+                .FirstOrDefaultAsync();
+            if (info == null)
+                return NotFound();
+            var fileInfo = new FileInfo(Path.Combine(info.StorePath, relativePath));
+            if (System.IO.File.Exists(info.StorePath)) fileInfo = new(info.StorePath);
 
             FileResult file;
+
             if (_extensionContentTypeProvider.TryGetContentType(fileInfo.Extension, out var contentType))
-                file = File(System.IO.File.OpenRead(fileInfo.FullName), contentType, fileInfo.Name);
+                file = File(
+                    System.IO.File.OpenRead(fileInfo.FullName),
+                    contentType,
+                    fileInfo.Name);
             else
-                file = File(System.IO.File.OpenRead(fileInfo.FullName), "application/octet-stream", fileInfo.Name);
+                file = File(
+                    System.IO.File.OpenRead(fileInfo.FullName),
+                    "application/octet-stream",
+                    fileInfo.Name);
 
             file.EnableRangeProcessing = true;
             return file;
@@ -216,16 +230,16 @@ namespace SecondDimensionWatcher.Controllers
         }
 
         [HttpGet("Download/{id}")]
-        public async Task<IActionResult> DownloadAsync([FromRoute] string id, CancellationToken cancellationToken)
+        public async Task DownloadAsync([FromRoute] string id, CancellationToken cancellationToken)
         {
             id = HttpUtility.UrlDecode(id);
             var animationInfo = await _dataContext.AnimationInfo.FindAsync(id);
             if (animationInfo == null)
-                return NotFound();
+                return;
             if (animationInfo.IsTracked)
             {
                 _logger.LogInformation($"The torrent {animationInfo.Description} has already added.");
-                return Ok();
+                return;
             }
 
             var content = new MultipartFormDataContent
@@ -241,10 +255,7 @@ namespace SecondDimensionWatcher.Controllers
                 animationInfo.IsTracked = true;
                 await _dataContext.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation($"The torrent {animationInfo.Description} successfully added.");
-                return Ok();
             }
-
-            return BadRequest();
         }
 
         public class TorrentInfoDto
@@ -283,30 +294,6 @@ namespace SecondDimensionWatcher.Controllers
             {
                 writer.WriteStringValue(ByteSize.FromBytes(value).ToString("#.#") + "/s");
             }
-        }
-
-        public class TorrentInfo
-        {
-            [JsonPropertyName("eta")] public int Eta { get; set; }
-
-            [JsonPropertyName("state")] public string State { get; set; }
-
-            [JsonPropertyName("progress")] public double Progress { get; set; }
-
-            [JsonPropertyName("content_path")] public string SavePath { get; set; }
-
-            [JsonPropertyName("dlspeed")] public int Speed { get; set; }
-        }
-
-        public class DownloadContent
-        {
-            public string Name { get; set; }
-            public string RelativePath { get; set; }
-        }
-
-        public class DownloadDirectoryContent : DownloadContent
-        {
-            public ICollection<DownloadContent> SubContents { get; set; }
         }
     }
 }
