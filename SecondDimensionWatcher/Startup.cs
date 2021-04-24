@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
@@ -37,6 +38,11 @@ namespace SecondDimensionWatcher
             var provider = new FileExtensionContentTypeProvider();
             provider.Mappings.Add(".mkv", "video/webm");
             services.AddSingleton(provider);
+            var http = new HttpClient();
+            http.BaseAddress = new(Configuration["DownloadSetting:BaseAddress"]);
+            http.DefaultRequestHeaders.UserAgent.Add(
+                new("SecondDimensionWatcher", "1.0"));
+            services.AddSingleton(http);
             services.AddHttpClient<FeedController>(client =>
             {
                 client.DefaultRequestHeaders.UserAgent.Add(
@@ -48,12 +54,19 @@ namespace SecondDimensionWatcher
                 client.DefaultRequestHeaders.UserAgent.Add(
                     new("SecondDimensionWatcher", "1.0"));
             });
+            services.AddMemoryCache();
+
             services.AddQuartz(q =>
             {
-                var jobKey = new JobKey("rss");
                 q.UseMicrosoftDependencyInjectionScopedJobFactory();
-                q.AddJob<RssUpdateJob>(o => { o.WithIdentity(jobKey); });
-                q.AddTrigger(o => { o.ForJob(jobKey).WithCronSchedule("0 0/10 * 1/1 * ? *"); });
+                q.AddJob<RssUpdateJob>(o => { o.WithIdentity("rss"); });
+                q.AddJob<FetchTorrentInfoJob>(o => { o.WithIdentity("fetch"); });
+                q.AddTrigger(o =>
+                {
+                    o.ForJob("rss")
+                        .WithCronSchedule("0 0/10 * 1/1 * ? *");
+                });
+                q.AddTrigger(o => { o.ForJob("fetch").StartNow(); });
             });
 
 
@@ -77,19 +90,15 @@ namespace SecondDimensionWatcher
 
             app.UseStaticFiles();
 
-            //app.UseWebSockets();
-
             app.UseRouting();
 
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                //endpoints.MapRazorPages();
                 endpoints.MapControllers();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
-                //endpoints.MapControllers();
             });
         }
     }

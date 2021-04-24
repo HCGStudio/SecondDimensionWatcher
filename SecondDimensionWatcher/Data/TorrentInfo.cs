@@ -13,5 +13,6 @@ namespace SecondDimensionWatcher.Data
         [JsonPropertyName("content_path")] public string SavePath { get; set; }
 
         [JsonPropertyName("dlspeed")] public int Speed { get; set; }
+        [JsonPropertyName("hash")] public string Hash { get; set; }
     }
 }

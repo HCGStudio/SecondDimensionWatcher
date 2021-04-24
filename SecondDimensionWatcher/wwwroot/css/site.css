@@ -56,6 +56,8 @@ body {
     margin-bottom: 60px;
 }
 
+::-webkit-scrollbar { display: none; }
+
 .footer {
     bottom: 0;
     line-height: 60px; /* Vertically center the text there */

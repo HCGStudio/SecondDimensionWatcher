@@ -14,6 +14,7 @@ using ByteSizeLib;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SecondDimensionWatcher.Data;
@@ -42,7 +43,7 @@ namespace SecondDimensionWatcher.Controllers
             _extensionContentTypeProvider = extensionContentTypeProvider;
         }
 
-        protected async Task<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
+        internal async Task<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
         {
             var response = await _http.GetStreamAsync("/api/v2/torrents/info?hashes=" + hash, cancellationToken);
             return await JsonSerializer.DeserializeAsync<TorrentInfo[]>(response, cancellationToken: cancellationToken);
@@ -132,15 +133,27 @@ namespace SecondDimensionWatcher.Controllers
         [HttpGet("File/{hash}")]
         public async Task<IActionResult> GetFileAsync([FromRoute] string hash, [FromQuery] string relativePath)
         {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
-            if (System.IO.File.Exists(info.SavePath)) fileInfo = new(info.SavePath);
+            var info = await _dataContext
+                .AnimationInfo
+                .Where(a => a.Hash == hash)
+                .FirstOrDefaultAsync();
+            if (info == null)
+                return NotFound();
+            var fileInfo = new FileInfo(Path.Combine(info.StorePath, relativePath));
+            if (System.IO.File.Exists(info.StorePath)) fileInfo = new(info.StorePath);
 
             FileResult file;
+
             if (_extensionContentTypeProvider.TryGetContentType(fileInfo.Extension, out var contentType))
-                file = File(System.IO.File.OpenRead(fileInfo.FullName), contentType, fileInfo.Name);
+                file = File(
+                    System.IO.File.OpenRead(fileInfo.FullName),
+                    contentType,
+                    fileInfo.Name);
             else
-                file = File(System.IO.File.OpenRead(fileInfo.FullName), "application/octet-stream", fileInfo.Name);
+                file = File(
+                    System.IO.File.OpenRead(fileInfo.FullName),
+                    "application/octet-stream",
+                    fileInfo.Name);
 
             file.EnableRangeProcessing = true;
             return file;

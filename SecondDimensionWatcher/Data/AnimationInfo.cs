@@ -2,9 +2,11 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 
 namespace SecondDimensionWatcher.Data
 {
+    [Index(nameof(Hash), IsUnique = true)]
     public class AnimationInfo
     {
         public string Id { get; set; }
@@ -14,6 +16,9 @@ namespace SecondDimensionWatcher.Data
         public byte[] TorrentData { get; set; }
         public string Hash { get; set; }
         public bool IsTracked { get; set; } = false;
+        public DateTimeOffset TrackTime { get; set; }
+        public bool IsFinished { get; set; } = false;
+        public string StorePath { get; set; }
     }
 
     public class AnimationInfoDto

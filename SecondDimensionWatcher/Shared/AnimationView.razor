@@ -21,13 +21,33 @@
                     <i class="bi bi-download"></i>下载速度: @SpeedString&nbsp;
                 </p>
                 <button type="button" @onclick="@(async () => await Pause())" class="btn btn-warning"><i class="bi bi-pause-fill"></i>&nbsp;暂停</button>
+                <button type="button" data-bs-toggle="modal" @onclick="@Delete" data-bs-target="#mainModal" class="btn btn-secondary"><i class="bi bi-x"></i>&nbsp;取消</button>
                 break;
             case TorrentStatus.Paused:
-                <p class="card-text"><i class="bi bi-pause-circle"></i>&nbsp;暂停中</p>
+                <p class="card-text">
+                    <i class="bi bi-pause-circle"></i>
+                    暂停中
+                </p>
                 <button type="button" @onclick="@(async () => await Resume())" class="btn btn-success"><i class="bi bi-play-fill"></i>&nbsp;恢复</button>
+                <button type="button" data-bs-toggle="modal" @onclick="@Delete" data-bs-target="#mainModal" class="btn btn-secondary"><i class="bi bi-x"></i>&nbsp;取消</button>
                 break;
             case TorrentStatus.Finished:
-                <p class="card-text">已完成</p>
+                <p class="card-text">
+                    <i class="bi bi-check"></i>已完成
+                </p>
+                <button type="button" @onclick="@(async () => await ViewFileAsync())" class="btn btn-success">
+                    <i class="bi bi-file-earmark"></i>&nbsp;查看文件
+                </button>
+                <button type="button" data-bs-toggle="modal"
+                        @onclick="@Delete" data-bs-target="#mainModal"
+                        class="btn btn-danger">
+                    <i class="bi bi-x"></i>&nbsp;删除
+                </button>
+                break;
+            case TorrentStatus.Error:
+                <p class="card-text">
+                    <i class="bi bi-x"></i>错误
+                </p>
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

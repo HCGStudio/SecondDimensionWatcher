@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using ByteSizeLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using SecondDimensionWatcher.Controllers;
 using SecondDimensionWatcher.Data;
 
@@ -24,6 +30,20 @@ namespace SecondDimensionWatcher.Shared
 
         [Inject] public FeedController FeedController { get; set; }
 
+        [Inject] public IMemoryCache MemoryCache { get; set; }
+
+        [Inject] public AppDataContext DbContext { get; set; }
+
+        [Inject] public HttpClient Http { get; set; }
+
+        [Inject] public ILogger<AnimationView> Logger { get; set; }
+
+        [Inject] public IJSRuntime JSRuntime { get; set; }
+
+        [Inject] public IConfiguration Configuration { get; set; }
+
+        [Parameter] public Action<AnimationInfo> ModalCallBack { get; set; }
+
         [Parameter] public AnimationInfo AnimationInfo { get; set; }
 
         public TorrentInfo Info { get; set; }
@@ -42,7 +62,7 @@ namespace SecondDimensionWatcher.Shared
 
         public void Dispose()
         {
-            TokenSource.Cancel();
+            TokenSource?.Cancel();
         }
 
         public void SetSuitableClass()
@@ -53,6 +73,7 @@ namespace SecondDimensionWatcher.Shared
                 TorrentStatus.Running => "progress-bar progress-bar-animated progress-bar-striped",
                 TorrentStatus.Paused => "progress-bar progress-bar-striped bg-warning",
                 TorrentStatus.Finished => "progress-bar progress-bar-striped bg-success",
+                TorrentStatus.Error => "progress-bar progress-bar-striped bg-danger",
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -68,23 +89,52 @@ namespace SecondDimensionWatcher.Shared
             return TorrentStatus.Error;
         }
 
+        public void BeginTrack()
+        {
+            FetchTask = InvokeAsync(async () =>
+            {
+                var token = TokenSource.Token;
+
+                while (Status != TorrentStatus.Finished || !token.IsCancellationRequested)
+                {
+                    var info = MemoryCache.Get<TorrentInfo>(AnimationInfo.Hash);
+                    if (info == null)
+                    {
+                        await Task.Delay(150, token);
+                        info = MemoryCache.Get<TorrentInfo>(AnimationInfo.Hash.ToUpper());
+                        if (info == null)
+                        {
+                            AnimationInfo = await DbContext.AnimationInfo.FindAsync(AnimationInfo.Id);
+                            Info = new()
+                            {
+                                Eta = 0,
+                                Speed = 0,
+                                Hash = AnimationInfo.Hash,
+                                Progress = 1,
+                                SavePath = AnimationInfo.StorePath
+                            };
+                            Status = TorrentStatus.Finished;
+                            ProgressValue = 1;
+                            SetSuitableClass();
+                            StateHasChanged();
+                            return;
+                        }
+                    }
+
+                    Info = info;
+                    Status = GetStatusFromString(Info.State);
+                    SetSuitableClass();
+                    ProgressValue = Info.Progress;
+                    StateHasChanged();
+                    await Task.Delay(100, token);
+                }
+            });
+        }
+
         protected override void OnParametersSet()
         {
             if (AnimationInfo.IsTracked)
-                FetchTask = InvokeAsync(async () =>
-                {
-                    var token = TokenSource.Token;
-
-                    while (Status != TorrentStatus.Finished || !token.IsCancellationRequested)
-                    {
-                        Info = await TorrentController.GetTorrentInfoOnce(AnimationInfo.Hash, token);
-                        Status = GetStatusFromString(Info.State);
-                        SetSuitableClass();
-                        ProgressValue = Info.Progress;
-                        StateHasChanged();
-                        await Task.Delay(100, token);
-                    }
-                });
+                BeginTrack();
         }
 
         public async ValueTask Pause()
@@ -97,9 +147,37 @@ namespace SecondDimensionWatcher.Shared
             await TorrentController.ResumeAsync(AnimationInfo.Hash, CancellationToken.None);
         }
 
+        public async ValueTask ViewFileAsync()
+        {
+            await JSRuntime.InvokeVoidAsync("open", $"/file/{AnimationInfo.Hash}", "_blank");
+        }
+
+        public void Delete()
+        {
+            ModalCallBack(AnimationInfo);
+        }
+
         public async ValueTask Download()
         {
-            await TorrentController.DownloadAsync(AnimationInfo.Id, CancellationToken.None);
+            var animationInfo = await DbContext.AnimationInfo.FindAsync(AnimationInfo.Id);
+            if (animationInfo.IsTracked)
+                return;
+            var content = new MultipartFormDataContent
+            {
+                {new ByteArrayContent(AnimationInfo.TorrentData), "torrent", $"{AnimationInfo.Hash}.torrent"}
+            };
+            var dir = Path.GetFullPath(Configuration["DownloadDir"]);
+            if (!string.IsNullOrWhiteSpace(dir))
+                content.Add(new StringContent(Path.GetFullPath(dir)), "savepath");
+            var response = await Http.PostAsync("/api/v2/torrents/add", content);
+            if (response.IsSuccessStatusCode)
+            {
+                animationInfo.IsTracked = true;
+                await DbContext.SaveChangesAsync();
+                AnimationInfo.IsTracked = true;
+                BeginTrack();
+                Logger.LogInformation($"The torrent {animationInfo.Description} successfully added.");
+            }
         }
     }
 }
