@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 using SecondDimensionWatcher.Controllers;
 using SecondDimensionWatcher.Data;
 
@@ -38,6 +40,7 @@ namespace SecondDimensionWatcher.Pages
         [Inject] public AppDataContext DbContext { get; set; }
 
         [Inject] public HttpClient Http { get; set; }
+        [Inject] public IJSRuntime JSRuntime { get; set; }
 
         public string ModalTitle { get; set; } = string.Empty;
         public string ModalContent { get; set; } = string.Empty;
@@ -134,7 +137,8 @@ namespace SecondDimensionWatcher.Pages
 
         public async ValueTask RefreshAsync()
         {
-            ;
+            await FeedController.RefreshAsync(CancellationToken.None);
+            await JSRuntime.InvokeVoidAsync("location.reload");
         }
     }
 }
