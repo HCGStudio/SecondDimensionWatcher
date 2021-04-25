@@ -34,12 +34,12 @@
 
 ### 启动程序
 
-若您使用的是Windows，启动`run.ps1`即可，若使用Linux或macOS，启动`run.sh`。
+若您使用的是Windows，启动`SecondDimensionWatcher.exe`即可，若使用Linux或macOS，启动`SecondDimensionWatcher`或者`dotnet SecondDimensionWatcher.dll`。
 
-默认在0.0.0.0监听5001端口，若要改变请在`run.ps1`或`run.sh`中修改。
+默认在[::1]监听5000与5001端口，若要改变请在`appsettings.json`中修改。
 
-若要使用SSL，请参考[Host ASP.NET Core on Linux with Nginx | Microsoft Docs](https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx?view=aspnetcore-5.0)
+5001端口监听的证书默认为自签证书，若要信任自签证书，请运行`dotnet dev-certs https --trust`。若要提供SSL证书，在`appsetting.json`中的`Kestrel:Endpoints:Https:Certificate:Path`中添您`pfx`格式证书的路径，在`Kestrel:Endpoints:Https:Certificate:Password`中添加您`pfx`格式证书的密码。
 
-## 开发说明
+若您不想使用`https`，可以去掉`Kestrel:EndPoints`中的HTTPS选项。但是为了数据安全，我们强烈建议您使用HTTPS。
 
-后端修改无需node，涉及到前端修改记得运行`gulp`。
+此外，也可以通过Nginx反代添加SSL证书。
