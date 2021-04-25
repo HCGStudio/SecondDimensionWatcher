@@ -21,10 +21,12 @@ jobs:
       run: dotnet build --no-restore
     - name: Publish
       run: dotnet publish -c release -o SecondDimensionWatcher-Alapha
+    - name: Remove pdbs.
+      run: rm SecondDimensionWatcher-Alapha/*.pdb
     - name: Pack Publish
       run: tar czvf SecondDimensionWatcher-Alapha.tar.gz SecondDimensionWatcher-Alapha
     - name: Pack Delta Publish
-      run: sh -c "tar czvf SecondDimensionWatcher-Delta-Alapha.tar.gz SecondDimensionWatcher-Delta-Alapha/SecondDimensionWatcher*"
+      run: tar czvf SecondDimensionWatcher-Delta-Alapha.tar.gz SecondDimensionWatcher-Alapha/SecondDimensionWatcher*
     - name: Delete Old Prerelease
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
       with:
