@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
@@ -39,6 +40,18 @@ namespace SecondDimensionWatcher.Pages
                 CurrentPath.Push(path);
             else
                 CurrentPath.Pop();
+        }
+
+        public string GetPlayUrl(string path = "play")
+        {
+            return $"/play/{AnimationInfo?.Hash}/" +
+                   $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), path))}";
+        }
+
+        public string GetDownloadUrl(string path = "play")
+        {
+            return $"/api/Torrent/File/{AnimationInfo?.Hash}?relativePath=" +
+                   $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), path))}";
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿@page "/file/{hash}"
-@using System.Web
 @using System.IO
 
 @if (IsReady)
@@ -40,14 +39,14 @@
                         @file.Name
                     </span>
                     <span class="text-nowrap">
-                        <a href="@($"/api/Torrent/File/{AnimationInfo?.Hash}?relativePath=" + $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), file.Name))}")"
-                           class="btn btn-link btn-sm">
+                        <button type="button" onclick="newPage('@GetDownloadUrl(file.Name)')"
+                                class="btn btn-link btn-sm">
                             <i class="bi bi-download"></i>
-                        </a>
-                        <a href="@($"/play/{AnimationInfo?.Hash}/" + $"{HttpUtility.UrlEncode(Path.Combine(Path.Combine(CurrentPath.ToArray()), file.Name))}")"
-                           class="btn btn-link btn-sm">
+                        </button>
+                        <button type="button" onclick="newPage('@GetPlayUrl(file.Name)')"
+                                class="btn btn-link btn-sm">
                             <i class="bi bi-play"></i>
-                        </a>
+                        </button>
                     </span>
                 </div>
             }
@@ -60,13 +59,14 @@
                     @(new FileInfo(Base).Name)
                 </span>
                 <span class="text-nowrap">
-                    <a href="@($"/api/Torrent/File/{AnimationInfo?.Hash}?relativePath=" + $"{HttpUtility.UrlEncode("play")}")"
-                       class="btn btn-link btn-sm">
+                    <button type="button" onclick="newPage('@GetDownloadUrl()')"
+                            class="btn btn-link btn-sm">
                         <i class="bi bi-download"></i>
-                    </a>
-                    <a href="@($"/play/{AnimationInfo?.Hash}/{HttpUtility.UrlEncode("play")}")" class="btn btn-link">
+                    </button>
+                    <button type="button" onclick="newPage('@GetPlayUrl()')"
+                            class="btn btn-link">
                         <i class="bi bi-play btn-sm"></i>
-                    </a>
+                    </button>
                 </span>
             </div>
         }

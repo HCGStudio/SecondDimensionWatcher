@@ -146,6 +146,11 @@ namespace SecondDimensionWatcher.Shared
             await Http.GetAsync("/api/v2/torrents/pause?hashes=" + AnimationInfo.Hash);
         }
 
+        public async Task OpenDetailPage()
+        {
+            await JSRuntime.InvokeVoidAsync("newPage",
+                $"/file/{AnimationInfo.Hash}");
+        }
 
         public void Delete()
         {
