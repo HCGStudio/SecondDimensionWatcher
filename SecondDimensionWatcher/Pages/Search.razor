@@ -1,48 +1,25 @@
-﻿@page "/"
+﻿@page "/search/{term}"
 
-<div class="alert alert-info alert-dismissible fade show" role="alert">
-    提示：拉取订阅在服务端自动进行，若要强制刷新，请点击<a @onclick="@(async () => await RefreshAsync())" href="#" class="alert-link">强制刷新</a>。
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
+<h2>@($"找到{TotalCount}个结果")</h2>
 
-<nav class="nav nav-tabs flex-column flex-sm-row" style="margin-bottom: 10px">
-    <a class="flex-sm-fill text-sm-center nav-link @(Selected == Selector.Remote ? "active" : "")" href="#"
-       @onclick="@(async () => await SetSelectorAndUpdateContent(Selector.Remote))">
-        远程
-    </a>
-    <a class="flex-sm-fill text-sm-center nav-link @(Selected == Selector.Local ? "active" : "")" href="#"
-       @onclick="@(async () => await SetSelectorAndUpdateContent(Selector.Local))">
-        本地
-    </a>
-    <a class="flex-sm-fill text-sm-center nav-link @(Selected == Selector.Downloading ? "active" : "")" href="#"
-       @onclick="@(async () => await SetSelectorAndUpdateContent(Selector.Downloading))">
-        正在下载
-    </a>
-    <a class="flex-sm-fill text-sm-center nav-link @(Selected == Selector.Finished ? "active" : "")" href="#"
-       @onclick="@(async () => await SetSelectorAndUpdateContent(Selector.Finished))">
-        已完成
-    </a>
-</nav>
-
-@foreach (var info in Info)
+@foreach (var info in AnimationInfos)
 {
     <AnimationView AnimationInfo="@info" ModalCallBack="@ModalCallBack"></AnimationView>
 }
-
 
 @if (TotalPage > 1)
 {
     <nav>
         <ul class="pagination justify-content-center">
             <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
-                <a class="page-link text-nowrap" @onclick="@(async () => await SwitchPage(CurrentPage - 1))" href="#">
+                <a @onclick:preventDefault class="page-link text-nowrap" @onclick="@(async () => await SwitchPage(CurrentPage - 1))" href="#">
                     上一页
                 </a>
             </li>
             @if (CurrentPage > 1)
             {
                 <li class="page-item">
-                    <a class="page-link" @onclick="@(async () => await SwitchPage(1))" href="#">
+                    <a @onclick:preventDefault class="page-link" @onclick="@(async () => await SwitchPage(1))" href="#">
                         1
                     </a>
                 </li>
@@ -50,13 +27,13 @@
             @if (CurrentPage > 3)
             {
                 <li class="page-item disabled">
-                    <a class="page-link" href="#">...</a>
+                    <a @onclick:preventDefault class="page-link" href="#">...</a>
                 </li>
             }
             @if (CurrentPage > 2)
             {
                 <li class="page-item">
-                    <a class="page-link" @onclick="@(async () => await SwitchPage(CurrentPage - 1))" href="#">
+                    <a @onclick:preventDefault class="page-link" @onclick="@(async () => await SwitchPage(CurrentPage - 1))" href="#">
                         @(CurrentPage - 1)
                     </a>
                 </li>
@@ -67,7 +44,7 @@
             @if (CurrentPage + 1 < TotalPage)
             {
                 <li class="page-item">
-                    <a class="page-link" @onclick="@(async () => await SwitchPage(CurrentPage + 1))" href="#">
+                    <a @onclick:preventDefault class="page-link" @onclick="@(async () => await SwitchPage(CurrentPage + 1))" href="#">
                         @(CurrentPage + 1)
                     </a>
                 </li>
@@ -75,19 +52,19 @@
             @if (CurrentPage + 2 < TotalPage)
             {
                 <li class="page-item disabled">
-                    <a class="page-link" href="#">...</a>
+                    <a @onclick:preventDefault class="page-link" href="#">...</a>
                 </li>
             }
             @if (CurrentPage < TotalPage)
             {
                 <li class="page-item">
-                    <a class="page-link" @onclick="@(async () => await SwitchPage(TotalPage))" href="#">
+                    <a @onclick:preventDefault class="page-link" @onclick="@(async () => await SwitchPage(TotalPage))" href="#">
                         @TotalPage
                     </a>
                 </li>
             }
             <li class="page-item @(CurrentPage == TotalPage ? "disabled" : "")">
-                <a class="page-link text-nowrap" @onclick="@(async () => await SwitchPage(CurrentPage + 1))" href="#">
+                <a @onclick:preventDefault class="page-link text-nowrap" @onclick="@(async () => await SwitchPage(CurrentPage + 1))" href="#">
                     下一页
                 </a>
             </li>

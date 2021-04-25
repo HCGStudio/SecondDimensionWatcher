@@ -27,9 +27,23 @@
 <body>
 
 <header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+    <nav class="navbar navbar-expand-md navbar-light border-bottom bg-white mb-3">
         <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index">二次元观测器</a>
+            <a class="navbar-brand" href="#">二次元观测器</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#toCollapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="toCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">主页</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <input id="searchContent" class="form-control me-2" type="search" placeholder="搜索">
+                    <button onclick="performSearch()" class="btn btn-outline-success text-nowrap">搜索</button>
+                </div>
+            </div>
         </div>
     </nav>
 </header>
