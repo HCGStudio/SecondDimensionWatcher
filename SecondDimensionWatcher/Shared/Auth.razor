@@ -1,0 +1,19 @@
+﻿@if (Configuration["AuthKey"] is null)
+{
+    <p>第一次访问，请设置密码。</p>
+    <div class="form-floating" style="margin-bottom: 10px">
+        <input @bind="PasswordToSet" type="password" class="form-control" id="setPassword" placeholder="密码">
+        <label for="setPassword">密码</label>
+    </div>
+    <button type="button" class="btn btn-primary" @onclick="SetPassword">确定</button>
+}
+else
+{
+    <p>本IP第一次访问，请输入解锁密码，解锁后本IP可无限制访问。</p>
+    <div class="form-floating" style="margin-bottom: 10px">
+        <input @bind="PasswordToAuth" type="password" class="form-control" id="inputPassword" placeholder="密码">
+        <label for="inputPassword">密码</label>
+    </div>
+    <p class="text-secondary">若忘记密码，请删除目录下的app.json。</p>
+    <button type="button" class="btn btn-primary" @onclick="AuthPassword">确定</button>
+}

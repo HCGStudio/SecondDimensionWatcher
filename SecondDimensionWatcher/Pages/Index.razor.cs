@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
-using SecondDimensionWatcher.Controllers;
 using SecondDimensionWatcher.Data;
+using SecondDimensionWatcher.Services;
 
 namespace SecondDimensionWatcher.Pages
 {
@@ -35,7 +35,7 @@ namespace SecondDimensionWatcher.Pages
 
         public IEnumerable<AnimationInfo> Info { get; set; } = Array.Empty<AnimationInfo>();
 
-        [Inject] public FeedController FeedController { get; set; }
+        [Inject] public FeedService FeedService { get; set; }
 
         [Inject] public AppDataContext DbContext { get; set; }
 
@@ -137,7 +137,7 @@ namespace SecondDimensionWatcher.Pages
 
         public async ValueTask RefreshAsync()
         {
-            await FeedController.RefreshAsync(CancellationToken.None);
+            await FeedService.RefreshAsync(CancellationToken.None);
             await JSRuntime.InvokeVoidAsync("location.reload");
         }
     }

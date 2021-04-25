@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
@@ -41,6 +40,5 @@ namespace SecondDimensionWatcher.Pages
             else
                 CurrentPath.Pop();
         }
-
     }
 }

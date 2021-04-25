@@ -10,8 +10,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
-using SecondDimensionWatcher.Controllers;
 using SecondDimensionWatcher.Data;
+using SecondDimensionWatcher.Services;
 
 namespace SecondDimensionWatcher.Shared
 {
@@ -26,9 +26,8 @@ namespace SecondDimensionWatcher.Shared
             Error
         }
 
-        [Inject] public TorrentController TorrentController { get; set; }
 
-        [Inject] public FeedController FeedController { get; set; }
+        [Inject] public FeedService FeedService { get; set; }
 
         [Inject] public IMemoryCache MemoryCache { get; set; }
 
@@ -139,14 +138,14 @@ namespace SecondDimensionWatcher.Shared
 
         public async ValueTask Pause()
         {
-            await TorrentController.PauseAsync(AnimationInfo.Hash, CancellationToken.None);
+            await Http.GetAsync("/api/v2/torrents/pause?hashes=" + AnimationInfo.Hash);
         }
 
         public async ValueTask Resume()
         {
-            await TorrentController.ResumeAsync(AnimationInfo.Hash, CancellationToken.None);
+            await Http.GetAsync("/api/v2/torrents/pause?hashes=" + AnimationInfo.Hash);
         }
-        
+
 
         public void Delete()
         {
@@ -169,6 +168,7 @@ namespace SecondDimensionWatcher.Shared
             if (response.IsSuccessStatusCode)
             {
                 animationInfo.IsTracked = true;
+                animationInfo.TrackTime = DateTimeOffset.Now;
                 await DbContext.SaveChangesAsync();
                 AnimationInfo.IsTracked = true;
                 BeginTrack();

@@ -1,27 +1,28 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Quartz;
-using SecondDimensionWatcher.Controllers;
 
 namespace SecondDimensionWatcher.Data
 {
     public class FetchTorrentInfoJob : IJob
     {
         private readonly AppDataContext _dataContext;
+        private readonly HttpClient _http;
         private readonly IMemoryCache _memoryCache;
-        private readonly TorrentController _torrentController;
 
         public FetchTorrentInfoJob(AppDataContext dataContext,
-            TorrentController torrentController,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            HttpClient http)
         {
             _dataContext = dataContext;
-            _torrentController = torrentController;
             _memoryCache = memoryCache;
+            _http = http;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -36,7 +37,7 @@ namespace SecondDimensionWatcher.Data
                 if (!shouldUpdated.Any())
                     continue;
                 var hashes = string.Join('|', shouldUpdated);
-                var result = await _torrentController.GetTorrentStatus(hashes, CancellationToken.None);
+                var result = await GetTorrentStatus(hashes, CancellationToken.None);
                 var finished = new List<TorrentInfo>();
                 foreach (var info in result)
                 {
@@ -58,6 +59,12 @@ namespace SecondDimensionWatcher.Data
 
                 await _dataContext.SaveChangesAsync();
             }
+        }
+
+        private async ValueTask<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
+        {
+            var response = await _http.GetStreamAsync("/api/v2/torrents/info?hashes=" + hash, cancellationToken);
+            return await JsonSerializer.DeserializeAsync<TorrentInfo[]>(response, cancellationToken: cancellationToken);
         }
     }
 }

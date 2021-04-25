@@ -1,8 +1,13 @@
 ﻿@page "/"
+@using Microsoft.Extensions.Caching.Memory
+@using SecondDimensionWatcher.Shared
 @namespace SecondDimensionWatcher.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject IMemoryCache MemoryCache
+@inject BlazorContext BlazorContext
 @{
     Layout = null;
+    BlazorContext.ClientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 }
 
 <!DOCTYPE html>
@@ -31,7 +36,14 @@
 <div class="container">
     <main role="main" class="pb-3">
         <div class="container-fluid">
-            <component type="typeof(App)" render-mode="Server"/>
+            @if (MemoryCache.Get<bool?>(BlazorContext.ClientIp) is false or null)
+            {
+                <component type="typeof(Auth)" param-BlazorContext="BlazorContext" render-mode="ServerPrerendered"/>
+            }
+            else
+            {
+                <component type="typeof(App)" render-mode="Server"/>
+            }
         </div>
     </main>
 </div>

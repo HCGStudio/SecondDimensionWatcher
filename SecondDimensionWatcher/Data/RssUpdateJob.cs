@@ -1,21 +1,21 @@
 ﻿using System.Threading.Tasks;
 using Quartz;
-using SecondDimensionWatcher.Controllers;
+using SecondDimensionWatcher.Services;
 
 namespace SecondDimensionWatcher.Data
 {
     public class RssUpdateJob : IJob
     {
-        private readonly FeedController _feedController;
+        private readonly FeedService _feedService;
 
-        public RssUpdateJob(FeedController feedController)
+        public RssUpdateJob(FeedService feedService)
         {
-            _feedController = feedController;
+            _feedService = feedService;
         }
 
         public async Task Execute(IJobExecutionContext context)
         {
-            await _feedController.RefreshAsync(default);
+            await _feedService.RefreshAsync(default);
         }
     }
 }

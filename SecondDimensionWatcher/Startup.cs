@@ -7,8 +7,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Quartz;
-using SecondDimensionWatcher.Controllers;
 using SecondDimensionWatcher.Data;
+using SecondDimensionWatcher.Services;
 
 namespace SecondDimensionWatcher
 {
@@ -31,10 +31,6 @@ namespace SecondDimensionWatcher
             {
                 options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
             });
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new() {Title = "SecondDimensionWatcher", Version = "v1"});
-            });
             var provider = new FileExtensionContentTypeProvider();
             provider.Mappings.Add(".mkv", "video/webm");
             services.AddSingleton(provider);
@@ -43,19 +39,9 @@ namespace SecondDimensionWatcher
             http.DefaultRequestHeaders.UserAgent.Add(
                 new("SecondDimensionWatcher", "1.0"));
             services.AddSingleton(http);
-            services.AddHttpClient<FeedController>(client =>
-            {
-                client.DefaultRequestHeaders.UserAgent.Add(
-                    new("SecondDimensionWatcher", "1.0"));
-            });
-            services.AddHttpClient<TorrentController>(client =>
-            {
-                client.BaseAddress = new(Configuration["DownloadSetting:BaseAddress"]);
-                client.DefaultRequestHeaders.UserAgent.Add(
-                    new("SecondDimensionWatcher", "1.0"));
-            });
             services.AddMemoryCache();
-
+            services.AddScoped<BlazorContext>();
+            services.AddTransient<FeedService>();
             services.AddQuartz(q =>
             {
                 q.UseMicrosoftDependencyInjectionScopedJobFactory();
@@ -82,9 +68,6 @@ namespace SecondDimensionWatcher
                 app.UseHsts();
 
             dataContext.Database.Migrate();
-
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SecondDimensionWatcher v1"));
 
             app.UseHttpsRedirection();
 

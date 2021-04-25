@@ -1,22 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.WebSockets;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using ByteSizeLib;
-using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 using SecondDimensionWatcher.Data;
 
 namespace SecondDimensionWatcher.Controllers
@@ -25,114 +13,26 @@ namespace SecondDimensionWatcher.Controllers
     [ApiController]
     public class TorrentController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
         private readonly AppDataContext _dataContext;
         private readonly FileExtensionContentTypeProvider _extensionContentTypeProvider;
-        private readonly HttpClient _http;
-        private readonly ILogger<FeedController> _logger;
+        private readonly IMemoryCache _memoryCache;
 
-
-        public TorrentController(IConfiguration configuration, AppDataContext dataContext,
-            ILogger<FeedController> logger, HttpClient client,
-            FileExtensionContentTypeProvider extensionContentTypeProvider)
+        public TorrentController(
+            AppDataContext dataContext,
+            FileExtensionContentTypeProvider extensionContentTypeProvider,
+            IMemoryCache memoryCache)
         {
-            _configuration = configuration;
             _dataContext = dataContext;
-            _logger = logger;
-            _http = client;
             _extensionContentTypeProvider = extensionContentTypeProvider;
+            _memoryCache = memoryCache;
         }
 
-        internal async Task<TorrentInfo[]> GetTorrentStatus(string hash, CancellationToken cancellationToken)
-        {
-            var response = await _http.GetStreamAsync("/api/v2/torrents/info?hashes=" + hash, cancellationToken);
-            return await JsonSerializer.DeserializeAsync<TorrentInfo[]>(response, cancellationToken: cancellationToken);
-        }
-
-        [HttpGet("Query/{hash}")]
-        public async Task<IActionResult> QueryStatusAsync([FromRoute] string hash, CancellationToken cancellationToken)
-        {
-            var status = await GetTorrentStatus(hash, cancellationToken);
-            if (!HttpContext.WebSockets.IsWebSocketRequest)
-                return Ok(status.Adapt<TorrentInfoDto[]>());
-
-            var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-            while (webSocket.State == WebSocketState.Open)
-            {
-                status = await GetTorrentStatus(hash, cancellationToken);
-                await webSocket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(status.Adapt<TorrentInfoDto[]>()),
-                    WebSocketMessageType.Text, true, cancellationToken);
-                await Task.Delay(100, cancellationToken);
-            }
-
-            return Ok();
-        }
-
-        internal async Task<TorrentInfo> GetTorrentInfoOnce(string hash, CancellationToken cancellationToken)
-        {
-            var status = await GetTorrentStatus(hash, cancellationToken);
-            return status.First();
-        }
-
-
-        [HttpGet("Pause/{hash}")]
-        public async Task PauseAsync([FromRoute] string hash, CancellationToken cancellationToken)
-        {
-            await _http.GetAsync("/api/v2/torrents/pause?hashes=" + hash, cancellationToken);
-        }
-
-        [HttpGet("Resume/{hash}")]
-        public async Task ResumeAsync([FromRoute] string hash, CancellationToken cancellationToken)
-        {
-            await _http.GetAsync("/api/v2/torrents/resume?hashes=" + hash, cancellationToken);
-        }
-
-        [HttpDelete("Untrack/{id}")]
-        public async Task<IActionResult> UntrackAsync([FromRoute] string id, CancellationToken cancellationToken)
-        {
-            var animationInfo = await _dataContext.AnimationInfo.FindAsync(id, cancellationToken);
-            if (animationInfo == null)
-                return NotFound();
-
-            animationInfo.IsTracked = false;
-            await _dataContext.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-
-        [HttpDelete("Delete/{id}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute] string id, CancellationToken cancellationToken)
-        {
-            var animationInfo = await _dataContext.AnimationInfo.FindAsync(id, cancellationToken);
-            if (animationInfo == null)
-                return NotFound();
-
-            await _http.GetAsync("/api/v2/torrents/resume?deleteFiles=true&hashes=" + animationInfo.Hash,
-                cancellationToken);
-
-            animationInfo.IsTracked = false;
-            await _dataContext.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpGet("FileName/{hash}")]
-        public async IAsyncEnumerable<string> GetFileNames([FromRoute] string hash, [FromQuery] string relativePath)
-        {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            if (System.IO.File.Exists(info.SavePath))
-            {
-                var fileInfo = new FileInfo(info.SavePath);
-                yield return fileInfo.Name;
-                yield break;
-            }
-
-            foreach (var fileInfo in new DirectoryInfo(Path.Combine(info.SavePath, relativePath)).EnumerateFiles())
-                yield return fileInfo.Name;
-        }
 
         [HttpGet("File/{hash}")]
         public async Task<IActionResult> GetFileAsync([FromRoute] string hash, [FromQuery] string relativePath)
         {
+            if (_memoryCache.Get<bool?>(HttpContext.Connection.RemoteIpAddress?.ToString()) is null or false)
+                return NotFound();
             var info = await _dataContext
                 .AnimationInfo
                 .Where(a => a.Hash == hash)
@@ -157,143 +57,6 @@ namespace SecondDimensionWatcher.Controllers
 
             file.EnableRangeProcessing = true;
             return file;
-        }
-
-        internal async Task<string> GetMimeAsync(string hash, string relativePath)
-        {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
-            if (System.IO.File.Exists(info.SavePath)) fileInfo = new(info.SavePath);
-
-            return _extensionContentTypeProvider
-                .TryGetContentType(fileInfo.Extension, out var contentType)
-                ? contentType
-                : "application/octet-stream";
-        }
-
-        internal async Task<string> GetRealPathAsync(string hash, string relativePath)
-        {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
-            if (System.IO.File.Exists(info.SavePath)) fileInfo = new(info.SavePath);
-            return fileInfo.FullName;
-        }
-
-        private bool CanBeSubtitle(string ext)
-        {
-            return ext == ".ass" || ext == ".srt";
-        }
-
-        internal async IAsyncEnumerable<string> PossibleSubtitles([FromRoute] string hash,
-            [FromQuery] string relativePath)
-        {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            var fileInfo = new FileInfo(Path.Combine(info.SavePath, relativePath));
-            if (System.IO.File.Exists(info.SavePath))
-                yield break;
-            if (fileInfo.Directory == null)
-                yield break;
-            foreach (var file in fileInfo.Directory.EnumerateFiles())
-                if (Path.GetFileNameWithoutExtension(file.Name)
-                    .StartsWith(Path.GetFileNameWithoutExtension(fileInfo.Name)) && CanBeSubtitle(file.Extension))
-                    yield return Path.Combine(relativePath, "..", file.Name);
-        }
-
-        [HttpGet("DirectoryName/{hash}")]
-        public async IAsyncEnumerable<string> GetDirectoryNames([FromRoute] string hash,
-            [FromQuery] string relativePath)
-        {
-            var info = (await GetTorrentStatus(hash, default)).First();
-            if (System.IO.File.Exists(info.SavePath)) yield break;
-
-            foreach (var directoryInfo in new DirectoryInfo(Path.Combine(info.SavePath, relativePath))
-                .EnumerateDirectories()) yield return directoryInfo.Name;
-        }
-
-        private List<DownloadContent> EnumerateFiles(DirectoryInfo info, string relativePath)
-        {
-            var list = new List<DownloadContent>();
-            foreach (var dir in info.EnumerateDirectories())
-                list.Add(new DownloadDirectoryContent
-                {
-                    Name = dir.Name,
-                    RelativePath = relativePath,
-                    SubContents = EnumerateFiles(dir, Path.Combine(relativePath, dir.Name))
-                });
-            list.AddRange(info.EnumerateFiles()
-                .Select(fileInfo => new DownloadContent
-                {
-                    Name = fileInfo.Name,
-                    RelativePath = relativePath
-                }));
-            return list;
-        }
-
-        [HttpGet("Download/{id}")]
-        public async Task DownloadAsync([FromRoute] string id, CancellationToken cancellationToken)
-        {
-            id = HttpUtility.UrlDecode(id);
-            var animationInfo = await _dataContext.AnimationInfo.FindAsync(id);
-            if (animationInfo == null)
-                return;
-            if (animationInfo.IsTracked)
-            {
-                _logger.LogInformation($"The torrent {animationInfo.Description} has already added.");
-                return;
-            }
-
-            var content = new MultipartFormDataContent
-            {
-                {new ByteArrayContent(animationInfo.TorrentData), "torrent", $"{animationInfo.Hash}.torrent"}
-            };
-            var dir = Path.GetFullPath(_configuration["DownloadDir"]);
-            if (!string.IsNullOrWhiteSpace(dir))
-                content.Add(new StringContent(Path.GetFullPath(dir)), "savepath");
-            var response = await _http.PostAsync("/api/v2/torrents/add", content, cancellationToken);
-            if (response.IsSuccessStatusCode)
-            {
-                animationInfo.IsTracked = true;
-                await _dataContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation($"The torrent {animationInfo.Description} successfully added.");
-            }
-        }
-
-        public class TorrentInfoDto
-        {
-            [JsonConverter(typeof(ReadableTimeSpanConverter))]
-            public int Eta { get; set; }
-
-            public string State { get; set; }
-            public double Progress { get; set; }
-
-            [JsonConverter(typeof(ReadableSpeedConverter))]
-            public int Speed { get; set; }
-        }
-
-        public class ReadableTimeSpanConverter : JsonConverter<int>
-        {
-            public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                return int.Parse(reader.GetString() ?? throw new InvalidOperationException());
-            }
-
-            public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
-            {
-                writer.WriteStringValue(new TimeSpan(0, 0, value).ToString("g", CultureInfo.CurrentCulture));
-            }
-        }
-
-        public class ReadableSpeedConverter : JsonConverter<int>
-        {
-            public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                return int.Parse(reader.GetString() ?? throw new InvalidOperationException());
-            }
-
-            public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
-            {
-                writer.WriteStringValue(ByteSize.FromBytes(value).ToString("#.#") + "/s");
-            }
         }
     }
 }
